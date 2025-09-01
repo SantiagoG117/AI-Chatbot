@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import OpenAI from 'openai';
+import z from 'zod';
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -30,9 +31,24 @@ app.get('/api/hello', (req: Request, res: Response) => {
 // Map conversation ID to last response ID in that conversation
 const conversations = new Map<string, string>();
 
-//? Endpoints
+//? Input validation: Shape of the incomingrequest data
+const chatSchema = z.object({
+   prompt: z
+      .string()
+      .trim()
+      .min(1, 'Prompt is required.')
+      .max(1000, 'Prompt is too long (max 1000 characters'),
+   conversationId: z.uuid(),
+});
 
+//? Route Handlers
 app.post('/api/chat', async (req: Request, res: Response) => {
+   //Validate the incoming request data
+   const parseResult = chatSchema.safeParse(req.body);
+   if (!parseResult.success) {
+      return res.status(400).json({ errors: parseResult.error.format() });
+   }
+
    //Get the user's prompt from the request
    const { prompt, conversationId } = req.body;
 
