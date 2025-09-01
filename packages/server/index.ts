@@ -49,23 +49,28 @@ app.post('/api/chat', async (req: Request, res: Response) => {
       return res.status(400).json({ errors: parseResult.error.format() });
    }
 
-   //Get the user's prompt from the request
-   const { prompt, conversationId } = req.body;
-
    //Send the prompt to Open AI:
-   const response = await client.responses.create({
-      model: 'gpt-4o-mini',
-      input: prompt,
-      temperature: 0.2,
-      max_output_tokens: 100,
-      //Send the previous response ID to help the API to continue the conversation from the last response and maintain context
-      //If no previous response exists, the API will treat this as a new conversation
-      previous_response_id: conversations.get(conversationId),
-   });
+   try {
+      //Get the user's prompt from the request
+      const { prompt, conversationId } = req.body;
+      const response = await client.responses.create({
+         model: 'gpt-4o-mini!',
+         input: prompt,
+         temperature: 0.2,
+         max_output_tokens: 100,
+         //Send the previous response ID to help the API to continue the conversation from the last response and maintain context
+         //If no previous response exists, the API will treat this as a new conversation
+         previous_response_id: conversations.get(conversationId),
+      });
 
-   //Update the last response Id of the current conversation
-   conversations.set(conversationId, response.id);
+      //Update the last response Id of the current conversation
+      conversations.set(conversationId, response.id);
 
-   //Return a JSON object to the client
-   return res.json({ message: response.output_text });
+      //Return a JSON object to the client
+      return res.json({ message: response.output_text });
+   } catch {
+      res.status(500).json({
+         error: 'Internal Server Error: Failed to generate response',
+      });
+   }
 });
